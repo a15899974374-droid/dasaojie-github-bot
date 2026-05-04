@@ -1,0 +1,43 @@
+name: GitHub 每日热门项目抓取
+
+on:
+  schedule:
+    # 北京时间 22:00 = UTC 14:00
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch-and-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: 检出仓库
+      uses: actions/checkout@v4
+
+    - name: 设置 Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: 安装依赖
+      run: pip install requests
+
+    - name: 运行抓取脚本
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: python fetch_trending.py
+
+    - name: 提交并推送
+      run: |
+        git config user.email "action@github.com"
+        git config user.name "GitHub Action"
+        git add github-daily-report/
+        if git diff --staged --quiet; then
+          echo "无更新"
+        else
+          DATE=$(date +"%Y-%m-%d")
+          git commit -m "📊 每日更新: ${DATE}"
+          git push
+        fi
